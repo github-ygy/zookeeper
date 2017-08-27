@@ -16,7 +16,7 @@ public class Curator_Start {
 
     public static final  String CONNECT_STRING = "192.168.150.130:2181,192.168.150.132:2181,192.168.150.133:2181";
 
-    public static final  int SESSION_TIMEOUT_MS = 60000;
+    public static final  int SESSION_TIMEOUT_MS = 5000;
 
     public static final  int CONNECTION_TIMEOUT_MS  = 5000 ;
 
@@ -39,7 +39,7 @@ public class Curator_Start {
         // int maxSleepMs)      最大sleep时间
         // copied from Hadoop's RetryPolicies.java  ExponentialBackoffRetry 睡眠策略
         //long sleepMs = baseSleepTimeMs * Math.max(1, random.nextInt(1 << (retryCount + 1)));
-
+        // sleepMs 将不会超过最大sleep时间
 
         //CuratorFramework curatorFramework=CuratorFrameworkFactory.newClient(
         //        CONNECT_STRING, SESSION_TIMEOUT_MS, CONNECTION_TIMEOUT_MS, retryPolicy);
@@ -63,6 +63,7 @@ public class Curator_Start {
         return  CuratorFrameworkFactory.builder()
                 .connectString(CONNECT_STRING)
                 .sessionTimeoutMs(SESSION_TIMEOUT_MS)
-                .connectionTimeoutMs(CONNECTION_TIMEOUT_MS);
+                //.connectionTimeoutMs(CONNECTION_TIMEOUT_MS)
+                .retryPolicy(new ExponentialBackoffRetry(1000,3));
     }
 }
