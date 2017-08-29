@@ -11,9 +11,9 @@ import java.util.concurrent.CountDownLatch;
 /**
  * Created by guoyao on 2017/8/28.
  */
-public class Curator_Listener {
+public class Curator_NodeCacheListener {
 
-    private static final Logger log=LoggerFactory.getLogger(Curator_Listener.class);
+    private static final Logger log=LoggerFactory.getLogger(Curator_NodeCacheListener.class);
 
     public static void main(String[] args) throws  Exception  {
 
