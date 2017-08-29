@@ -14,7 +14,9 @@ public class Curator_Start {
 
     private static final Logger log = LoggerFactory.getLogger(Curator_Start.class);
 
-    public static final  String CONNECT_STRING = "192.168.150.130:2181,192.168.150.132:2181,192.168.150.133:2181";
+    public static final String CONNECT_STRING="192.168.150.130:2181,192.168.150.132:2181,192.168.150.133:2181";
+
+    public static final  String CONNECT_STRING_YGY = "www.ygy.com:2181";
 
     public static final  int SESSION_TIMEOUT_MS = 5000;
 
@@ -57,6 +59,14 @@ public class Curator_Start {
 
         Thread.sleep(10000000);
         curatorFramework.close();
+    }
+
+    public static CuratorFrameworkFactory.Builder getYGYBuilder() {
+        return  CuratorFrameworkFactory.builder()
+                .connectString(CONNECT_STRING_YGY)
+                .sessionTimeoutMs(SESSION_TIMEOUT_MS)
+                //.connectionTimeoutMs(CONNECTION_TIMEOUT_MS)
+                .retryPolicy(new ExponentialBackoffRetry(1000,3));
     }
 
     public static CuratorFrameworkFactory.Builder getBaseBuilder() {
