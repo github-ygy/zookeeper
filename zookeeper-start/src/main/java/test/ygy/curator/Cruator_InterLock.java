@@ -12,9 +12,9 @@ import java.util.concurrent.Executors;
 /**
  * Created by guoyao on 2017/8/28.
  */
-public class Crutor_InterLock {
+public class Cruator_InterLock {
 
-    private static final Logger log=LoggerFactory.getLogger(Crutor_InterLock.class);
+    private static final Logger log=LoggerFactory.getLogger(Cruator_InterLock.class);
 
     private  static  int index = 0 ;
 
