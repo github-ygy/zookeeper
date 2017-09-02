@@ -43,16 +43,6 @@ public class MysqlBootStrap {
      */
     @PostConstruct
     public void startBootStrapAsyn() {
-        //new Thread(
-        //        ()-> {
-        //            try {
-        //                MysqlBootStrap.this.compaignInBackground();
-        //            } catch (Exception e) {
-        //                log.error("startBootStrapAsyn error " ,e);
-        //            }
-        //        }
-        //,"mysqlBootStrap").start();
-        //log.info(" startBootStrapAsyn is starting in back");
         try {
             compaignInBackground();
             log.info(" start bootStrap in back  success ");
@@ -62,10 +52,10 @@ public class MysqlBootStrap {
     }
 
     @Scheduled(fixedDelay=HEART_BEAT_RATE, initialDelay=HEART_BEAT_RATE * 2)
-    public void checkMaster() {
-        //检验是否有合格的master 存在
-        HeartBeatDO existDO=heartBeatDOMapper.selectByMaster(HeartBeatRoleContants.ROLE_MASTER);
+    public void startHeartBeatCheckMaster() {
         try {
+            //检验是否有合格的master 存在
+            HeartBeatDO existDO= heartBeatDOMapper.selectByMaster(HeartBeatRoleContants.ROLE_MASTER);
             boolean masterStatus=false;
             try {
                 masterStatus=validateMaster(existDO);
@@ -90,29 +80,32 @@ public class MysqlBootStrap {
                 //无论本项目是否正在运行，关闭即可
                 businessTask.stop();
                 //修改状态
-                existDO.setHostName(hostName);
-                existDO.setRole(HeartBeatRoleContants.ROLE_SLAVE);
-                heartBeatDOMapper.updateCurrentStatus(existDO);
+                updateStatus(hostName, HeartBeatRoleContants.ROLE_SLAVE);
                 log.info(" i am not  master ,i am running ok ");
                 return;
             }
-
             //存在不合理的master
             //无论不合理master是否为本身服务，启动即可，并且修改为master
             existDO.setRole(HeartBeatRoleContants.ROLE_SLAVE);
             heartBeatDOMapper.updateCurrentStatus(existDO);
-            existDO.setHostName(hostName);
             businessTask.start();
-            existDO.setRole(HeartBeatRoleContants.ROLE_MASTER);
-            heartBeatDOMapper.updateCurrentStatus(existDO);
+            updateStatus(hostName, HeartBeatRoleContants.ROLE_MASTER);
             log.info(" i am master ,i am running ok  ");
         } catch (Exception e) {
             log.error("checkMaster  error", e);
-            //无论出现什么异常，关闭服务状态
+            //无论出现什么异常，关闭服务状态,修改自身状态
             businessTask.stop();
+            updateStatus(hostName, HeartBeatRoleContants.ROLE_SLAVE);
         }
-
     }
+
+   private void  updateStatus(String role ,String hostName) {
+       HeartBeatDO heartBeatDO=new HeartBeatDO();
+       heartBeatDO.setRole(role);
+       heartBeatDO.setHostName(hostName);
+       heartBeatDOMapper.updateCurrentStatus(heartBeatDO);
+   }
+
 
     private boolean validateMaster(HeartBeatDO existDO) throws Exception {
         if (null == existDO) {
