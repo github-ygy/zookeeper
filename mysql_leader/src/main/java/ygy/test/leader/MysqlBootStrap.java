@@ -128,7 +128,7 @@ public class MysqlBootStrap {
     }
 
     private void compaignInBackground() {
-        //TODO validate hostname
+        //TODO validate hostname  如果hostname 重复 不能启动任务
         // 初始化启动，注册为slave状态。
         int registerStatus=registerHeartBeatByMysql();
         if (HeartBeatContants.REGIST_FAIL == registerStatus) {
