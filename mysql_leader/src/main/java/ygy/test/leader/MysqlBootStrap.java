@@ -27,13 +27,13 @@ public class MysqlBootStrap {
 
     private static final Logger log=LoggerFactory.getLogger(MysqlBootStrap.class);
 
-    private static final int HEART_BEAT_RATE=30 * 1000;
+    private static final int HEART_BEAT_RATE=50 * 1000;
 
-    private static final int INVALIDATE_MASTER_SECOND=60;
+    private static final int INVALIDATE_MASTER_SECOND=120 ;
 
     private static final String hostName=SystemConfigUtil.getHostname();
 
-    private  static  volatile boolean isConflict = false ;
+    private  static  volatile boolean isConflict = true;
 
     @Autowired
     private HeartBeatDOMapper heartBeatDOMapper;
@@ -54,7 +54,7 @@ public class MysqlBootStrap {
         }
     }
 
-    @Scheduled(fixedDelay=HEART_BEAT_RATE, initialDelay=HEART_BEAT_RATE * 2)
+    @Scheduled(fixedRate = HEART_BEAT_RATE  )
     public void startHeartBeatCheckMaster() {
         if (isConflict) {
             log.error(" startHeartBeatCheckMaster hostName conflict  schedule start fail hostName =" + hostName);
@@ -65,7 +65,7 @@ public class MysqlBootStrap {
             HeartBeatDO existDO= heartBeatDOMapper.selectByMaster(HeartBeatRoleContants.ROLE_MASTER);
             if (existDO == null) {
                 log.error("startHeartBeatCheckMaster selectByMaster  master is not exist ,init fail  ");
-                registerHeartBeatByMysql();
+                compaignInBackground();
                 return;
             }
             boolean masterStatus=validateRunning(existDO);
@@ -92,8 +92,8 @@ public class MysqlBootStrap {
             //无论不合理master是否为本身服务，启动即可，并且修改为master
             existDO.setRole(HeartBeatRoleContants.ROLE_SLAVE);
             heartBeatDOMapper.updateCurrentStatus(existDO);
-            businessTask.start();
             updateStatus(hostName, HeartBeatRoleContants.ROLE_MASTER);
+            businessTask.start();
             log.info(" i am master ,i am running ok  ");
         } catch (Exception e) {
             log.error("checkMaster  error", e);
@@ -132,9 +132,9 @@ public class MysqlBootStrap {
     }
 
     private void compaignInBackground() {
+        isConflict = true ;   //如果出现 master is not exist 则关闭任务
         boolean hostNameStatus=validateHostName();
         if (hostNameStatus) {
-            isConflict = true ;
             log.error("compaignInBackground  validateHostName hostName conflict  hostName =" + hostName);
             return;
         }
@@ -149,21 +149,34 @@ public class MysqlBootStrap {
         int compaignStatus=compaignMaster();
         if (HeartBeatContants.COMPAIGN_FAIL == compaignStatus) {
             log.warn(" compaignInBackground  compaignMaster init fail param hostName = " + hostName);
+            isConflict = false ;
             return;
         }
         //启动业务程序
         startBusiness();
+        isConflict = false ;
         log.info("compaignInBackground compaignMaster success  hostName = " + hostName);
     }
 
-    private boolean validateHostName() {
+    private boolean validateHostName()  {
         if (StringUtils.isEmpty(hostName)) {
             return false ;
         }
         // 查询是否已经存在正在运行的hostName
         HeartBeatDO heartBeatDO=heartBeatDOMapper.selectByHostName(hostName);
 
-        return  validateRunning(heartBeatDO);
+        //有可能是本机需要重启，并不是冲突
+        boolean validateStatus=validateRunning(heartBeatDO);
+        if (validateStatus) {
+            try {
+                Thread.sleep(INVALIDATE_MASTER_SECOND * 1000);
+            } catch (InterruptedException e) {
+               log.error(" validateHostName  thead sleep eroor ",e);
+            }
+            HeartBeatDO nowHeartBeatDO=heartBeatDOMapper.selectByHostName(hostName);
+            return  validateRunning(nowHeartBeatDO);
+        }
+        return false ;
     }
 
 
