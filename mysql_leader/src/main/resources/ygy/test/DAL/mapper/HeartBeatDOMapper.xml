@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ygy.test.DAL.mapper.HeartBeatDOMapper">
+
+    <resultMap id="Base_ResultMap" type="ygy.test.DAL.DO.HeartBeatDO">
+        <id column="host_name" property="hostName" javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="role" property="role" javaType="java.lang.String" jdbcType="VARCHAR" />
+        <result column="create_time" property="createTime" javaType="java.util.Date" jdbcType="TIMESTAMP" />
+        <result column="update_time" property="updateTime" javaType="java.util.Date" jdbcType="TIMESTAMP" />
+    </resultMap>
+
+    <sql id="Bast_Column_List">
+        host_name,
+        role,
+        create_time,
+        update_time
+    </sql>
+
+    <insert id="insert" parameterType="ygy.test.DAL.DO.HeartBeatDO">
+        insert into heart_beat
+        (
+        <include refid="Bast_Column_List" />
+        ) VALUES
+        (
+        #{hostName},
+        #{role},
+        now(),
+        now()
+        )
+    </insert>
+
+    <update id="updateCurrentStatus" parameterType="ygy.test.DAL.DO.HeartBeatDO" >
+        update heart_beat set role = #{role} ,update_time = now()
+        where host_name = #{hostName}
+    </update>
+
+    <select id="selectByMaster" resultType="java.lang.String" resultMap="Base_ResultMap">
+            select  <include refid="Bast_Column_List" />
+            from    heart_beat
+            where role = #{role}
+    </select>
+
+    <select id="selectByHostName" resultType="java.lang.String" resultMap="Base_ResultMap">
+        select  <include refid="Bast_Column_List" />
+        from    heart_beat
+        where host_name = #{hostName}
+    </select>
+
+
+</mapper>

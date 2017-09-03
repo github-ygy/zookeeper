@@ -13,5 +13,6 @@ public interface HeartBeatDOMapper {
 
     HeartBeatDO selectByMaster(String roleMaster);
 
-    int resetRole2Slave(HeartBeatDO heartBeatDO);
+    HeartBeatDO selectByHostName(String hostName);
+
 }

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import ygy.test.DAL.DO.HeartBeatDO;
 import ygy.test.DAL.mapper.HeartBeatDOMapper;
 import ygy.test.common.contants.HeartBeatContants;
@@ -32,6 +33,8 @@ public class MysqlBootStrap {
 
     private static final String hostName=SystemConfigUtil.getHostname();
 
+    private  static  volatile boolean isConflict = false ;
+
     @Autowired
     private HeartBeatDOMapper heartBeatDOMapper;
 
@@ -53,18 +56,19 @@ public class MysqlBootStrap {
 
     @Scheduled(fixedDelay=HEART_BEAT_RATE, initialDelay=HEART_BEAT_RATE * 2)
     public void startHeartBeatCheckMaster() {
+        if (isConflict) {
+            log.error(" startHeartBeatCheckMaster hostName conflict  schedule start fail hostName =" + hostName);
+            return;
+        }
         try {
             //检验是否有合格的master 存在
             HeartBeatDO existDO= heartBeatDOMapper.selectByMaster(HeartBeatRoleContants.ROLE_MASTER);
-            boolean masterStatus=false;
-            try {
-                masterStatus=validateMaster(existDO);
-            } catch (Exception e) {
-                log.error(" check master is not exist ,init faile  ");
+            if (existDO == null) {
+                log.error("startHeartBeatCheckMaster selectByMaster  master is not exist ,init fail  ");
                 registerHeartBeatByMysql();
                 return;
             }
-
+            boolean masterStatus=validateRunning(existDO);
             // 存在合理 master  并且为当前服务
             if (masterStatus && hostName.equals(existDO.getHostName())) {
                 //无论本项目是否正在运行，重启开启即可
@@ -107,9 +111,9 @@ public class MysqlBootStrap {
    }
 
 
-    private boolean validateMaster(HeartBeatDO existDO) throws Exception {
+    private boolean validateRunning(HeartBeatDO existDO)  {
         if (null == existDO) {
-            throw new Exception();
+            return false;
         }
         Date updateTime=existDO.getUpdateTime();
         long second=ConcurrentDateUtil.diffDate(updateTime, new Date(), ConcurrentDateUtil.Type.SECOND);
@@ -128,7 +132,12 @@ public class MysqlBootStrap {
     }
 
     private void compaignInBackground() {
-        //TODO validate hostname  如果hostname 重复 不能启动任务
+        boolean hostNameStatus=validateHostName();
+        if (hostNameStatus) {
+            isConflict = true ;
+            log.error("compaignInBackground  validateHostName hostName conflict  hostName =" + hostName);
+            return;
+        }
         // 初始化启动，注册为slave状态。
         int registerStatus=registerHeartBeatByMysql();
         if (HeartBeatContants.REGIST_FAIL == registerStatus) {
@@ -146,6 +155,17 @@ public class MysqlBootStrap {
         startBusiness();
         log.info("compaignInBackground compaignMaster success  hostName = " + hostName);
     }
+
+    private boolean validateHostName() {
+        if (StringUtils.isEmpty(hostName)) {
+            return false ;
+        }
+        // 查询是否已经存在正在运行的hostName
+        HeartBeatDO heartBeatDO=heartBeatDOMapper.selectByHostName(hostName);
+
+        return  validateRunning(heartBeatDO);
+    }
+
 
     private int compaignMaster() {
         try {
