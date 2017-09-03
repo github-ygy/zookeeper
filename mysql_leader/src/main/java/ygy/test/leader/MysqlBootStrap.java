@@ -31,7 +31,7 @@ public class MysqlBootStrap {
 
     private static final int INVALIDATE_MASTER_SECOND=120 ;
 
-    private static final String hostName=SystemConfigUtil.getHostname();
+    private static final String hostName= SystemConfigUtil.getHostname(); //"rocketmq-nameserver2";
 
     private  static  volatile boolean isConflict = true;
 
@@ -84,7 +84,7 @@ public class MysqlBootStrap {
                 //无论本项目是否正在运行，关闭即可
                 businessTask.stop();
                 //修改状态
-                updateStatus(hostName, HeartBeatRoleContants.ROLE_SLAVE);
+                updateStatus(HeartBeatRoleContants.ROLE_SLAVE);
                 log.info(" i am not  master ,i am running ok ");
                 return;
             }
@@ -92,18 +92,18 @@ public class MysqlBootStrap {
             //无论不合理master是否为本身服务，启动即可，并且修改为master
             existDO.setRole(HeartBeatRoleContants.ROLE_SLAVE);
             heartBeatDOMapper.updateCurrentStatus(existDO);
-            updateStatus(hostName, HeartBeatRoleContants.ROLE_MASTER);
+            updateStatus( HeartBeatRoleContants.ROLE_MASTER);
             businessTask.start();
             log.info(" i am master ,i am running ok  ");
         } catch (Exception e) {
             log.error("checkMaster  error", e);
             //无论出现什么异常，关闭服务状态,修改自身状态
             businessTask.stop();
-            updateStatus(hostName, HeartBeatRoleContants.ROLE_SLAVE);
+            updateStatus(HeartBeatRoleContants.ROLE_SLAVE);
         }
     }
 
-   private void  updateStatus(String role ,String hostName) {
+   private void  updateStatus(String role) {
        HeartBeatDO heartBeatDO=new HeartBeatDO();
        heartBeatDO.setRole(role);
        heartBeatDO.setHostName(hostName);
@@ -117,6 +117,7 @@ public class MysqlBootStrap {
         }
         Date updateTime=existDO.getUpdateTime();
         long second=ConcurrentDateUtil.diffDate(updateTime, new Date(), ConcurrentDateUtil.Type.SECOND);
+        log.warn(" running between start stop takes  second  = " + second);
         if (second > INVALIDATE_MASTER_SECOND) {
             return false;
         }
@@ -169,7 +170,8 @@ public class MysqlBootStrap {
         boolean validateStatus=validateRunning(heartBeatDO);
         if (validateStatus) {
             try {
-                Thread.sleep(INVALIDATE_MASTER_SECOND * 1000);
+                log.warn(" hostName is exist . waiting for next try ");
+                Thread.sleep(INVALIDATE_MASTER_SECOND * 1000 );
             } catch (InterruptedException e) {
                log.error(" validateHostName  thead sleep eroor ",e);
             }
